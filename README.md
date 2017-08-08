@@ -2,6 +2,8 @@
 
 Provide function set to export keyframes or positions of objects.
 
+![screenshot.png](https://github.com/Drunkar/blender_save_object_keyframes/blob/images/screenshot.png?raw=true)
+
 
 ## Feature 1: Save keyframes
 
