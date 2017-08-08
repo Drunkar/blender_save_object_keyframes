@@ -1,5 +1,27 @@
 # blender_save_object_keyframes
 
-- id key: define as regular expresson
+Provide function set to export keyframes or positions of objects.
+
+
+## Feature 1: Save keyframes
+
+Save keyframes of object, which matched a keyword as CSV.
+
+- location: 3D View > Objet > Animation
 - shortcut: `ctrl+alt+K`
-- output csv directory is the same as .blend file.
+
+parameters:
+
+name|type|description
+:--|:--|:--
+id key|string|Regular expresson to specify objects.
+start frame|integer| Start frame to specify the target term.
+end frame|integer| End frame to specify the target term.
+export file name|string|Output CSV file name. Output csv directory is the same as .blend file.
+
+
+## Feature 2: Save seletion positions
+
+Save selected objects' current positions as CSV.
+
+- location: 3D View > Objet > Animation

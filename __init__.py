@@ -10,7 +10,7 @@ from bpy_extras.io_utils import ExportHelper
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 1),
+    "version": (0, 2),
     "blender": (2, 7, 8),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
@@ -93,8 +93,30 @@ class SaveKeyframes(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self)
 
 
+class SaveSelectionPositions(bpy.types.Operator):
+
+    bl_idname = "object.save_selection_positions"
+    bl_label = "save selection positions"
+    bl_description = "Save selected objects\' current positions."
+    bl_options = {"REGISTER", "UNDO"}
+    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+
+    # main
+    def execute(self, context):
+        with open(self.filepath, "w") as f:
+            for obj in [o for o in bpy.context.scene.objects if o.select]:
+                f.write(str(obj.location[0]) + "," + str(obj.location[1]) + "," + str(obj.location[2]) + "\n")
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        self.filepath = ".csv"
+        bpy.context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
 def menu_func(self, context):
     self.layout.operator(SaveKeyframes.bl_idname, text="Save keyframes")
+    self.layout.operator(SaveSelectionPositions.bl_idname, text="Save selection positions")
 
 
 def register_shortcut():
@@ -134,11 +156,11 @@ def register():
             default="")
     bpy.types.Scene.save_keyframes_start_frame\
         = bpy.props.IntProperty(
-            name="start_frame",
+            name="start frame",
             description="parent id in group")
     bpy.types.Scene.save_keyframes_end_frame\
         = bpy.props.IntProperty(
-            name="end_frame",
+            name="end frame",
             description="parent id in group")
     bpy.types.Scene.save_keyframes_file_name\
         = bpy.props.StringProperty(
