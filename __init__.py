@@ -114,9 +114,33 @@ class SaveSelectionPositions(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 
+class SaveVerticesPositionsOfMesh(bpy.types.Operator):
+
+    bl_idname = "object.save_vertices_positions_of_mesh"
+    bl_label = "save vertices positions of mesh"
+    bl_description = "Save vertices\' positions of active mesh."
+    bl_options = {"REGISTER", "UNDO"}
+    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+
+    # main
+    def execute(self, context):
+        obj = bpy.context.active_object
+        verts = [obj.matrix_world * vert.co for vert in obj.data.vertices]
+        with open(self.filepath, "w") as f:
+            for v in verts:
+                f.write(str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + "\n")
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        self.filepath = ".csv"
+        bpy.context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
 def menu_func(self, context):
     self.layout.operator(SaveKeyframes.bl_idname, text="Save keyframes")
     self.layout.operator(SaveSelectionPositions.bl_idname, text="Save selection positions")
+    self.layout.operator(SaveVerticesPositionsOfMesh.bl_idname, text="Save vertices positions of mesh")
 
 
 def register_shortcut():
