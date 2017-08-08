@@ -12,7 +12,7 @@ bl_info = {
     "author": "Drunkar",
     "version": (0, 1),
     "blender": (2, 7, 8),
-    "location": "3D View, Ctrl + Alt + k",
+    "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
     "warning": "",
     "wiki_url": "",
@@ -24,7 +24,7 @@ bl_info = {
 addon_keymaps = []
 
 
-class SeectionSplitter(bpy.types.Operator):
+class SaveKeyframes(bpy.types.Operator):
 
     bl_idname = "object.save_object_keyframes"
     bl_label = "save object keyframes"
@@ -94,7 +94,7 @@ class SeectionSplitter(bpy.types.Operator):
 
 
 def menu_func(self, context):
-    self.layout.operator(SeectionSplitter.bl_idname)
+    self.layout.operator(SaveKeyframes.bl_idname, text="Save keyframes")
 
 
 def register_shortcut():
@@ -105,7 +105,7 @@ def register_shortcut():
         km = kc.keymaps.new(name="3D View", space_type="VIEW_3D")
         # key
         kmi = km.keymap_items.new(
-            idname=SeectionSplitter.bl_idname,
+            idname=SaveKeyframes.bl_idname,
             type="K",
             value="PRESS",
             shift=False,
@@ -126,6 +126,7 @@ def unregister_shortcut():
 def register():
     unregister_shortcut()
     bpy.utils.register_module(__name__)
+    bpy.types.VIEW3D_MT_object_animation.append(menu_func)
     bpy.types.Scene.save_keyframes_id_key\
         = bpy.props.StringProperty(
             name="id key (regular expression)",
@@ -149,6 +150,7 @@ def register():
 
 def unregister():
     bpy.utils.unregister_module(__name__)
+    bpy.types.VIEW3D_MT_object_animation.remove(menu_func)
     del bpy.types.Scene.save_keyframes_id_key
     del bpy.types.Scene.save_keyframes_start_frame
     del bpy.types.Scene.save_keyframes_end_frame
