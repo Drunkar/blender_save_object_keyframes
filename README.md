@@ -22,7 +22,7 @@ Save keyframes of object, which matched a keyword as CSV.
 ### output csv format:
 
 
-| |
+　|　
 :--|:--
 column1|object_id
 column2|frame
@@ -56,7 +56,7 @@ Save keyframes of object's active material, which matched a keyword as CSV.
 ### output csv format:
 
 
-| |
+　|　
 :--|:--
 column1|object_id
 column2|frame
