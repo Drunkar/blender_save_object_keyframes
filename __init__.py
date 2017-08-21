@@ -35,8 +35,8 @@ class SaveKeyframes(bpy.types.Operator):
     def execute(self, context):
         keyframe_index = {"location": 0, "rotation_euler": 3, "scale": 6}
         objs = []
-        for obj in bpy.context.selected_objects:
-            matched = re.search(context.scene.save_keyframes_id_key, obj.name)
+        for name, obj in bpy.context.scene.objects.items():
+            matched = re.search(context.scene.save_keyframes_id_key, name)
             if matched:
                 objs.append(obj)
 
