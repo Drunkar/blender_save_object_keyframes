@@ -1,6 +1,16 @@
 """
 output file format:
-    object_id,frame,location_0,location_1,location_2,rotation_euler_0,rotation_euler_1,rotation_euler_2,sale_0,scale_1,scale_2
+    - object keyframe row:
+        object_id, frame,
+        location_0, location_1, location_2,
+        rotation_euler_0, rotation_euler_1, rotation_euler_2,
+        sale_0, scale_1, scale_2
+
+    - material keyframe row:
+        object_id, frame,
+        diffuse_color_r, diffuse_color_g, diffuse_color_b,
+        specular_color_r ,specular_color_g, specular_color_b,
+        emit, ambient, translucency
 """
 
 import re
@@ -10,7 +20,7 @@ from bpy_extras.io_utils import ExportHelper
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 2),
+    "version": (0, 3),
     "blender": (2, 7, 8),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
@@ -93,6 +103,75 @@ class SaveKeyframes(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self)
 
 
+class SaveMaterialKeyframes(bpy.types.Operator):
+
+    bl_idname = "object.save_object_material_keyframes"
+    bl_label = "save object material keyframes"
+    bl_description = "Save keyframes of object\'s material, which matched a keyword."
+    bl_options = {"REGISTER", "UNDO"}
+
+    # main
+    def execute(self, context):
+        keyframe_index = {"diffuse_color": 0, "specular_color": 3, "emit": 6, "ambient": 7, "translucency": 8}
+        objs = []
+        for obj in bpy.context.scene.objects:
+            matched = re.search(context.scene.save_keyframes_id_key, obj.name)
+            if matched:
+                objs.append(obj)
+
+        keyframes = {}
+        start_frame = context.scene.save_keyframes_start_frame
+        end_frame = context.scene.save_keyframes_end_frame
+        for obj in objs:
+
+            # extract keyframes
+            # [[keyframe_index, frame, value], [], ...]
+            kfs = []
+            for fc in obj.active_material.animation_data.action.fcurves:
+                if fc.data_path.endswith(("diffuse_color", "specular_color", "emit", "ambient", "translucency")):
+                    kfs += [[keyframe_index[fc.data_path] + fc.array_index, i.co[0], i.co[1]] for i in fc.keyframe_points if i.co[0] >= start_frame and i.co[0] <= end_frame]
+
+            # register keyframes
+            # {obj_name: {
+            #     frame_1: [
+            #               diffuse_color_r,diffuse_color_g,diffuse_color_b,
+            #               specular_color_r,specular_color_g,specular_color_b,
+            #               emit,ambient,translucency
+            #              ],
+            #     frame_2: [], ...}
+            keyframes[obj.name] = {}
+            for key in kfs:
+                fr = str(int(key[1]))
+                if fr in keyframes[obj.name]:
+                    keyframes[obj.name][fr][key[0]] = key[2]
+                else:
+                    keyframes[obj.name][fr] = [
+                        0, 0, 0, 0, 0, 0, 1, 1, 1]
+                    keyframes[obj.name][fr][key[0]] = key[2]
+
+        if bpy.data.is_saved:
+            filepath = bpy.path.abspath(
+                "//" + context.scene.save_keyframes_file_name + ".csv")
+            with open(filepath, "w") as f:
+                for uav, frames in keyframes.items():
+                    for frame, v in frames.items():
+                        v = map(str, v)
+                        f.write(uav + "," + frame + "," + ",".join(v) + "\n")
+        else:
+            raise Exception("Please save blender file first.")
+        return {"FINISHED"}
+
+    def draw(self, context):
+        col = self.layout.column(align=True)
+        col.prop(context.scene, "save_keyframes_id_key")
+        col.prop(context.scene, "save_keyframes_start_frame")
+        col.prop(context.scene, "save_keyframes_end_frame")
+        col.prop(context.scene, "save_keyframes_file_name")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+
 class SaveSelectionPositions(bpy.types.Operator):
 
     bl_idname = "object.save_selection_positions"
@@ -138,7 +217,8 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
 
 
 def menu_func(self, context):
-    self.layout.operator(SaveKeyframes.bl_idname, text="Save keyframes")
+    self.layout.operator(SaveKeyframes.bl_idname, text="Save object keyframes")
+    self.layout.operator(SaveMaterialKeyframes.bl_idname, text="Save material keyframes")
     self.layout.operator(SaveSelectionPositions.bl_idname, text="Save selection positions")
     self.layout.operator(SaveVerticesPositionsOfMesh.bl_idname, text="Save vertices positions of mesh")
 
