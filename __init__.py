@@ -20,7 +20,7 @@ from bpy_extras.io_utils import ExportHelper
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 3),
+    "version": (0, 4),
     "blender": (2, 7, 8),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
@@ -60,7 +60,8 @@ class SaveKeyframes(bpy.types.Operator):
             kfs = []
             for fc in obj.animation_data.action.fcurves:
                 if fc.data_path.endswith(("location", "rotation_euler", "scale")):
-                    kfs += [[keyframe_index[fc.data_path] + fc.array_index, i.co[0], i.co[1]] for i in fc.keyframe_points if i.co[0] >= start_frame and i.co[0] <= end_frame]
+                    kfs += [[keyframe_index[fc.data_path] + fc.array_index, i.co[0], i.co[1]]
+                            for i in fc.keyframe_points if i.co[0] >= start_frame and i.co[0] <= end_frame]
 
             # register keyframes
             # {obj_name: {
@@ -112,7 +113,8 @@ class SaveMaterialKeyframes(bpy.types.Operator):
 
     # main
     def execute(self, context):
-        keyframe_index = {"diffuse_color": 0, "specular_color": 3, "emit": 6, "ambient": 7, "translucency": 8}
+        keyframe_index = {"diffuse_color": 0, "specular_color": 3,
+                          "emit": 6, "ambient": 7, "translucency": 8}
         objs = []
         for obj in bpy.context.scene.objects:
             matched = re.search(context.scene.save_keyframes_id_key, obj.name)
@@ -129,7 +131,8 @@ class SaveMaterialKeyframes(bpy.types.Operator):
             kfs = []
             for fc in obj.active_material.animation_data.action.fcurves:
                 if fc.data_path.endswith(("diffuse_color", "specular_color", "emit", "ambient", "translucency")):
-                    kfs += [[keyframe_index[fc.data_path] + fc.array_index, i.co[0], i.co[1]] for i in fc.keyframe_points if i.co[0] >= start_frame and i.co[0] <= end_frame]
+                    kfs += [[keyframe_index[fc.data_path] + fc.array_index, i.co[0], i.co[1]]
+                            for i in fc.keyframe_points if i.co[0] >= start_frame and i.co[0] <= end_frame]
 
             # register keyframes
             # {obj_name: {
@@ -184,7 +187,11 @@ class SaveSelectionPositions(bpy.types.Operator):
     def execute(self, context):
         with open(self.filepath, "w") as f:
             for obj in [o for o in bpy.context.scene.objects if o.select]:
-                f.write(str(obj.location[0]) + "," + str(obj.location[1]) + "," + str(obj.location[2]) + "\n")
+                f.write(
+                    obj.name + "," + str(bpy.context.scene.frame_current) + ","
+                    + str(obj.location[0]) + "," + str(obj.location[1]) + "," + str(obj.location[2]) + ","
+                    + str(obj.rotation_euler[0]) + "," + str(obj.rotation_euler[1]) + "," + str(obj.rotation_euler[2]) + ","
+                    + str(obj.scale[0]) + "," + str(obj.scale[1]) + "," + str(obj.scale[2]) + "\n")
         return {"FINISHED"}
 
     def invoke(self, context, event):
@@ -218,9 +225,12 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
 
 def menu_func(self, context):
     self.layout.operator(SaveKeyframes.bl_idname, text="Save object keyframes")
-    self.layout.operator(SaveMaterialKeyframes.bl_idname, text="Save material keyframes")
-    self.layout.operator(SaveSelectionPositions.bl_idname, text="Save selection positions")
-    self.layout.operator(SaveVerticesPositionsOfMesh.bl_idname, text="Save vertices positions of mesh")
+    self.layout.operator(SaveMaterialKeyframes.bl_idname,
+                         text="Save material keyframes")
+    self.layout.operator(SaveSelectionPositions.bl_idname,
+                         text="Save selection positions")
+    self.layout.operator(SaveVerticesPositionsOfMesh.bl_idname,
+                         text="Save vertices positions of mesh")
 
 
 def register_shortcut():
