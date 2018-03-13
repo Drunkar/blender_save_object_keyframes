@@ -5,13 +5,12 @@ output file format:
 
 import re
 import bpy
-from bpy_extras.io_utils import ExportHelper
 
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 2),
-    "blender": (2, 7, 8),
+    "version": (0, 3),
+    "blender": (2, 7, 9),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
     "warning": "",
@@ -113,7 +112,6 @@ class SaveSelectionPositions(bpy.types.Operator):
         bpy.context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
-
 class SaveVerticesPositionsOfMesh(bpy.types.Operator):
 
     bl_idname = "object.save_vertices_positions_of_mesh"
@@ -125,7 +123,12 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
     # main
     def execute(self, context):
         obj = bpy.context.active_object
-        verts = [obj.matrix_world * vert.co for vert in obj.data.vertices]
+        if obj.type == "MESH":
+            verts = [obj.matrix_world * vert.co for vert in obj.data.vertices]
+        elif obj.type == "CURVE":
+            verts = [p.co[:3] for p in obj.data.splines[0].points]
+        else:
+            raise Exception("Unsupported type: {}.".format(obj.type))
         with open(self.filepath, "w") as f:
             for v in verts:
                 f.write(str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + "\n")
