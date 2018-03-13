@@ -130,9 +130,11 @@ class SaveMaterialKeyframes(bpy.types.Operator):
             # [[keyframe_index, frame, value], [], ...]
             kfs = []
             for fc in obj.active_material.animation_data.action.fcurves:
-                if fc.data_path.endswith(("diffuse_color", "specular_color", "emit", "ambient", "translucency")):
+                if fc.data_path.endswith(("diffuse_color", "specular_color",
+                                          "emit", "ambient", "translucency")):
                     kfs += [[keyframe_index[fc.data_path] + fc.array_index, i.co[0], i.co[1]]
-                            for i in fc.keyframe_points if i.co[0] >= start_frame and i.co[0] <= end_frame]
+                            for i in fc.keyframe_points
+                            if i.co[0] >= start_frame and i.co[0] <= end_frame]
 
             # register keyframes
             # {obj_name: {
@@ -189,8 +191,11 @@ class SaveSelectionPositions(bpy.types.Operator):
             for obj in [o for o in bpy.context.scene.objects if o.select]:
                 f.write(
                     obj.name + "," + str(bpy.context.scene.frame_current) + ","
-                    + str(obj.location[0]) + "," + str(obj.location[1]) + "," + str(obj.location[2]) + ","
-                    + str(obj.rotation_euler[0]) + "," + str(obj.rotation_euler[1]) + "," + str(obj.rotation_euler[2]) + ","
+                    + str(obj.location[0]) + "," + str(obj.location[1])
+                    + "," + str(obj.location[2]) + ","
+                    + str(obj.rotation_euler[0]) +
+                    "," + str(obj.rotation_euler[1])
+                    + "," + str(obj.rotation_euler[2]) + ","
                     + str(obj.scale[0]) + "," + str(obj.scale[1]) + "," + str(obj.scale[2]) + "\n")
         return {"FINISHED"}
 
