@@ -49,7 +49,9 @@ class SaveKeyframes(bpy.types.Operator):
             kfs = []
             for fc in obj.animation_data.action.fcurves:
                 if fc.data_path.endswith(("location", "rotation_euler", "scale")):
-                    kfs += [[keyframe_index[fc.data_path] + fc.array_index, i.co[0], i.co[1]] for i in fc.keyframe_points if i.co[0] >= start_frame and i.co[0] <= end_frame]
+                    kfs += [[keyframe_index[fc.data_path] + fc.array_index, i.co[0], i.co[1]]
+                            for i in fc.keyframe_points
+                            if i.co[0] >= start_frame and i.co[0] <= end_frame]
 
             # register keyframes
             # {obj_name: {
@@ -104,13 +106,15 @@ class SaveSelectionPositions(bpy.types.Operator):
     def execute(self, context):
         with open(self.filepath, "w") as f:
             for obj in [o for o in bpy.context.scene.objects if o.select]:
-                f.write(str(obj.location[0]) + "," + str(obj.location[1]) + "," + str(obj.location[2]) + "\n")
+                f.write(str(obj.location[0]) + "," + str(obj.location[1])
+                        + "," + str(obj.location[2]) + "\n")
         return {"FINISHED"}
 
     def invoke(self, context, event):
         self.filepath = ".csv"
         bpy.context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
+
 
 class SaveVerticesPositionsOfMesh(bpy.types.Operator):
 
@@ -142,8 +146,10 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
 
 def menu_func(self, context):
     self.layout.operator(SaveKeyframes.bl_idname, text="Save keyframes")
-    self.layout.operator(SaveSelectionPositions.bl_idname, text="Save selection positions")
-    self.layout.operator(SaveVerticesPositionsOfMesh.bl_idname, text="Save vertices positions of mesh")
+    self.layout.operator(SaveSelectionPositions.bl_idname,
+                         text="Save selection positions")
+    self.layout.operator(SaveVerticesPositionsOfMesh.bl_idname,
+                         text="Save vertices positions of mesh")
 
 
 def register_shortcut():
