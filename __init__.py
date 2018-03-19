@@ -15,6 +15,7 @@ output file format:
 
 import re
 import bpy
+from mathutils import Vector
 
 bl_info = {
     "name": "save object keyframes",
@@ -219,7 +220,7 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
         if obj.type == "MESH":
             verts = [obj.matrix_world * vert.co for vert in obj.data.vertices]
         elif obj.type == "CURVE":
-            verts = [p.co[:3] for p in obj.data.splines[0].points]
+            verts = [(obj.matrix_world * Vector(p.co[:3])) for p in obj.data.splines[0].points]
         else:
             raise Exception("Unsupported type: {}.".format(obj.type))
         with open(self.filepath, "w") as f:
