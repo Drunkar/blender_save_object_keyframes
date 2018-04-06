@@ -234,6 +234,35 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 
+class SaveMeshAnimationVertices(bpy.types.Operator):
+
+    bl_idname = "object.save_mesh_animation_vertices"
+    bl_label = "save vertices positions of mesh animation"
+    bl_description = "Save vertices\' positions of active mesh."
+    bl_options = {"REGISTER", "UNDO"}
+    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+
+    # main
+    def execute(self, context):
+        obj = bpy.context.active_object
+        if obj.type != "MESH":
+            raise Exception("Unsupported type: {}.".format(obj.type))
+
+        with open(self.filepath, "w") as f:
+            for frame in range(bpy.context.scene.frame_current, 251):
+                bpy.context.scene.frame_set(frame)
+                mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
+                verts = [obj.matrix_world * vert.co for vert in mesh.vertices]
+                for i, v in enumerate(verts):
+                    f.write("OBJ_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        self.filepath = ".csv"
+        bpy.context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
 def menu_func(self, context):
     self.layout.operator(SaveKeyframes.bl_idname, text="Save object keyframes")
     self.layout.operator(SaveMaterialKeyframes.bl_idname,
@@ -242,6 +271,8 @@ def menu_func(self, context):
                          text="Save selection positions")
     self.layout.operator(SaveVerticesPositionsOfMesh.bl_idname,
                          text="Save vertices positions of mesh")
+    self.layout.operator(SaveMeshAnimationVertices.bl_idname,
+                         text="Save vertices positions of mesh animation")
 
 
 def register_shortcut():
