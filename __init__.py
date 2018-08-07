@@ -20,7 +20,7 @@ from mathutils import Vector
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 5),
+    "version": (0, 6),
     "blender": (2, 7, 9),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
@@ -190,14 +190,17 @@ class SaveSelectionPositions(bpy.types.Operator):
     def execute(self, context):
         with open(self.filepath, "w") as f:
             for obj in [o for o in bpy.context.scene.objects if o.select]:
+                loc = obj.matrix_world.to_translation()
+                rot = obj.matrix_world.to_euler()
+                sca = obj.matrix_world.to_scale()
                 f.write(
                     obj.name + "," + str(bpy.context.scene.frame_current) + ","
-                    + str(obj.location[0]) + "," + str(obj.location[1])
-                    + "," + str(obj.location[2]) + ","
-                    + str(obj.rotation_euler[0]) +
-                    "," + str(obj.rotation_euler[1])
-                    + "," + str(obj.rotation_euler[2]) + ","
-                    + str(obj.scale[0]) + "," + str(obj.scale[1]) + "," + str(obj.scale[2]) + "\n")
+                    + str(loc[0]) + "," + str(loc[1])
+                    + "," + str(loc[2]) + ","
+                    + str(rot[0]) +
+                    "," + str(rot[1])
+                    + "," + str(rot[2]) + ","
+                    + str(sca[0]) + "," + str(sca[1]) + "," + str(sca[2]) + "\n")
         return {"FINISHED"}
 
     def invoke(self, context, event):
