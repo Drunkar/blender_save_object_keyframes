@@ -20,7 +20,7 @@ from mathutils import Vector
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 6),
+    "version": (0, 7),
     "blender": (2, 7, 9),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
@@ -189,7 +189,7 @@ class SaveSelectionPositions(bpy.types.Operator):
     # main
     def execute(self, context):
         with open(self.filepath, "w") as f:
-            for obj in [o for o in bpy.context.scene.objects if o.select]:
+            for obj in [o for o in bpy.context.scene.objects if o.select][::-1]:
                 loc = obj.matrix_world.to_translation()
                 rot = obj.matrix_world.to_euler()
                 sca = obj.matrix_world.to_scale()
@@ -227,7 +227,7 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
         else:
             raise Exception("Unsupported type: {}.".format(obj.type))
         with open(self.filepath, "w") as f:
-            for v in verts:
+            for v in verts[::-1]:
                 f.write(str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + "\n")
         return {"FINISHED"}
 
@@ -256,7 +256,7 @@ class SaveMeshAnimationVertices(bpy.types.Operator):
                 bpy.context.scene.frame_set(frame)
                 mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
                 verts = [obj.matrix_world * vert.co for vert in mesh.vertices]
-                for i, v in enumerate(verts):
+                for i, v in enumerate(verts[::-1]):
                     f.write("OBJ_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
         return {"FINISHED"}
 
