@@ -20,7 +20,7 @@ from mathutils import Vector
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 8, 0),
+    "version": (0, 9, 0),
     "blender": (2, 7, 9),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
@@ -113,6 +113,73 @@ class SaveKeyframes(bpy.types.Operator):
         col.prop(context.scene, "save_keyframes_id_key")
         col.prop(context.scene, "save_keyframes_start_frame")
         col.prop(context.scene, "save_keyframes_end_frame")
+        col.prop(context.scene, "save_keyframes_file_name")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+
+class SaveAnimations(bpy.types.Operator):
+
+    bl_idname = "object.save_animations"
+    bl_label = "save positions of each frames to csv"
+    bl_description = "Save positions of object, which matched a keyword."
+    bl_options = {"REGISTER", "UNDO"}
+
+    # main
+    def execute(self, context):
+        objs = []
+        for name, obj in bpy.context.scene.objects.items():
+            matched = re.search(context.scene.save_keyframes_id_key, name)
+            if matched:
+                objs.append(obj)
+
+        start_frame = context.scene.save_keyframes_start_frame
+        end_frame = context.scene.save_keyframes_end_frame
+        interval = context.scene.save_keyframes_interval
+        last_frame_is_included = (end_frame - start_frame) % interval == 0
+        keyframes = {}
+        for obj in objs:
+            # register keyframes
+            # {obj_name: {
+            #     frame_1: [
+            #               location_0,location_1,location_2,
+            #               rotation_euler_0,rotation_euler_1,rotation_euler_2,
+            #               sale_0,scale_1,scale_2
+            #              ],
+            #     frame_2: [], ...}
+            keyframes[obj.name] = {}
+            for frame in range(start_frame, end_frame+1)[::interval]:
+                bpy.context.scene.frame_set(frame)
+                loc = obj.matrix_world.to_translation()
+                rot = obj.matrix_world.to_euler()
+                sca = obj.matrix_world.to_scale()
+                keyframes[obj.name][str(frame)] = [loc[0], loc[1], loc[2], rot[0], rot[1], rot[2], sca[0], sca[1], sca[2]]
+            if not last_frame_is_included:
+                bpy.context.scene.frame_set(end_frame)
+                loc = obj.matrix_world.to_translation()
+                rot = obj.matrix_world.to_euler()
+                sca = obj.matrix_world.to_scale()
+                keyframes[obj.name][str(end_frame)] = [loc[0], loc[1], loc[2], rot[0], rot[1], rot[2], sca[0], sca[1], sca[2]]
+
+        if bpy.data.is_saved:
+            filepath = bpy.path.abspath(
+                "//" + context.scene.save_keyframes_file_name + ".csv")
+            with open(filepath, "w") as f:
+                for uav, frames in keyframes.items():
+                    for frame, v in frames.items():
+                        v = map(str, v)
+                        f.write(uav + "," + frame + "," + ",".join(v) + "\n")
+        else:
+            raise Exception("Please save blender file first.")
+        return {"FINISHED"}
+
+    def draw(self, context):
+        col = self.layout.column(align=True)
+        col.prop(context.scene, "save_keyframes_id_key")
+        col.prop(context.scene, "save_keyframes_start_frame")
+        col.prop(context.scene, "save_keyframes_end_frame")
+        col.prop(context.scene, "save_keyframes_interval")
         col.prop(context.scene, "save_keyframes_file_name")
 
     def invoke(self, context, event):
@@ -282,6 +349,7 @@ class SaveMeshAnimationVertices(bpy.types.Operator):
 
 def menu_func(self, context):
     self.layout.operator(SaveKeyframes.bl_idname, text="Save object keyframes")
+    self.layout.operator(SaveAnimations.bl_idname, text="Save positions of each frame")
     self.layout.operator(SaveMaterialKeyframes.bl_idname,
                          text="Save material keyframes")
     self.layout.operator(SaveSelectionPositions.bl_idname,
@@ -330,11 +398,15 @@ def register():
     bpy.types.Scene.save_keyframes_start_frame\
         = bpy.props.IntProperty(
             name="start frame",
-            description="parent id in group")
+            description="start frame")
     bpy.types.Scene.save_keyframes_end_frame\
         = bpy.props.IntProperty(
             name="end frame",
-            description="parent id in group")
+            description="end frame")
+    bpy.types.Scene.save_keyframes_interval\
+        = bpy.props.IntProperty(
+            name="interval",
+            description="save frame interval")
     bpy.types.Scene.save_keyframes_file_name\
         = bpy.props.StringProperty(
             name="export file name",
