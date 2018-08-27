@@ -20,7 +20,7 @@ from mathutils import Vector
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 7),
+    "version": (0, 8, 0),
     "blender": (2, 7, 9),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
@@ -43,7 +43,6 @@ class SaveKeyframes(bpy.types.Operator):
 
     # main
     def execute(self, context):
-        keyframe_index = {"location": 0, "rotation_euler": 3, "scale": 6}
         objs = []
         for name, obj in bpy.context.scene.objects.items():
             matched = re.search(context.scene.save_keyframes_id_key, name)
@@ -57,12 +56,21 @@ class SaveKeyframes(bpy.types.Operator):
 
             # extract keyframes
             # [[keyframe_index, frame, value], [], ...]
-            kfs = []
-            for fc in obj.animation_data.action.fcurves:
+            if obj.animation_data is not None:
+                fcurves = obj.animation_data.action.fcurves
+            elif obj.parent.animation_data is not None:
+                fcurves = obj.parent.animation_data.action.fcurves
+            elif obj.parent.parent.animation_data is not None:
+                fcurves = obj.parent.parent.animation_data.action.fcurves
+            elif obj.parent.parent.parent.animation_data is not None:
+                fcurves = obj.parent.parent.parent.animation_data.action.fcurves
+            else:
+                fcurves = []
+            frames = []
+            for fc in fcurves:
                 if fc.data_path.endswith(("location", "rotation_euler", "scale")):
-                    kfs += [[keyframe_index[fc.data_path] + fc.array_index, i.co[0], i.co[1]]
-                            for i in fc.keyframe_points
-                            if i.co[0] >= start_frame and i.co[0] <= end_frame]
+                    frames += [int(i.co[0]) for i in fc.keyframe_points if i.co[0] >= start_frame and i.co[0] <= end_frame]
+            frames = list(set(frames))
 
             # register keyframes
             # {obj_name: {
@@ -73,14 +81,12 @@ class SaveKeyframes(bpy.types.Operator):
             #              ],
             #     frame_2: [], ...}
             keyframes[obj.name] = {}
-            for key in kfs:
-                fr = str(int(key[1]))
-                if fr in keyframes[obj.name]:
-                    keyframes[obj.name][fr][key[0]] = key[2]
-                else:
-                    keyframes[obj.name][fr] = [
-                        0, 0, 0, 0, 0, 0, 1, 1, 1]
-                    keyframes[obj.name][fr][key[0]] = key[2]
+            for frame in frames:
+                bpy.context.scene.frame_set(frame)
+                loc = obj.matrix_world.to_translation()
+                rot = obj.matrix_world.to_euler()
+                sca = obj.matrix_world.to_scale()
+                keyframes[obj.name][str(frame)] = [loc[0], loc[1], loc[2], rot[0], rot[1], rot[2], sca[0], sca[1], sca[2]]
 
         if bpy.data.is_saved:
             filepath = bpy.path.abspath(
