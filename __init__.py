@@ -63,7 +63,15 @@ class SaveKeyframes(bpy.types.Operator):
             elif obj.parent.parent.animation_data is not None:
                 fcurves = obj.parent.parent.animation_data.action.fcurves
             elif obj.parent.parent.parent.animation_data is not None:
-                fcurves = obj.parent.parent.parent.animation_data.action.fcurves
+                fcurves = obj.parent.parent.parent.animation_data.action.fcurve
+            elif obj.parent.parent.parent.parent.animation_data is not None:
+                fcurves = obj.parent.parent.parent.parent.animation_data.action.fcurve
+            elif obj.parent.parent.parent.parent.parent.animation_data is not None:
+                fcurves = obj.parent.parent.parent.parent.parent.animation_data.action.fcurve
+            elif obj.parent.parent.parent.parent.parent.parent.animation_data is not None:
+                fcurves = obj.parent.parent.parent.parent.parent.parent.animation_data.action.fcurve
+            elif obj.parent.parent.parent.parent.parent.parent.parent.animation_data is not None:
+                fcurves = obj.parent.parent.parent.parent.parent.parent.parent.animation_data.action.fcurve
             else:
                 fcurves = []
             frames = []
