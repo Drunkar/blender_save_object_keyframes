@@ -20,8 +20,8 @@ from mathutils import Vector
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 9, 1),
-    "blender": (2, 7, 9),
+    "version": (0, 9, 2),
+    "blender": (2, 79),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
     "warning": "",
@@ -130,9 +130,10 @@ class SaveAnimations(bpy.types.Operator):
     def execute(self, context):
         objs = []
         for name, obj in bpy.context.scene.objects.items():
-            matched = re.search(context.scene.save_keyframes_id_key, name)
-            if matched:
-                objs.append(obj)
+            if obj.select:
+                matched = re.search(context.scene.save_keyframes_id_key, name)
+                if matched:
+                    objs.append(obj)
 
         start_frame = context.scene.save_keyframes_start_frame
         end_frame = context.scene.save_keyframes_end_frame
