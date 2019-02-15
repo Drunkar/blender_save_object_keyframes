@@ -20,7 +20,7 @@ from mathutils import Vector
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 9, 2),
+    "version": (0, 9, 3),
     "blender": (2, 79),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
@@ -361,7 +361,8 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
     def execute(self, context):
         obj = bpy.context.active_object
         if obj.type == "MESH":
-            verts = [obj.matrix_world * vert.co for vert in obj.data.vertices]
+            mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
+            verts = [obj.matrix_world * vert.co for vert in mesh.vertices]
         elif obj.type == "CURVE":
             verts = [(obj.matrix_world * Vector(p.co[:3])) for p in obj.data.splines[0].points]
         else:
