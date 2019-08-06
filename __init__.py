@@ -218,19 +218,28 @@ class SaveAnimationsOfMesh(bpy.types.Operator):
                 #               sale_0,scale_1,scale_2
                 #              ],
                 #     frame_2: [], ...}
+                hide_initial = obj.hide_viewport
+                obj.hide_viewport = False
                 for frame in range(start_frame, end_frame+1)[::interval]:
                     bpy.context.scene.frame_set(frame)
-                    mesh = obj.to_mesh(preserve_all_data_layers=True, depsgraph=bpy.context.evaluated_depsgraph_get())
-                    verts = [obj.matrix_world @ vert.co for vert in mesh.vertices]
+                    depsgraph = bpy.context.evaluated_depsgraph_get()
+                    ob_eval = obj.evaluated_get(depsgraph)
+                    mesh = ob_eval.to_mesh()
+                    mesh.transform(ob_eval.matrix_world) # apply modifiers with preview settings
+                    verts = [vert.co for vert in mesh.vertices]
                     for i, v in enumerate(verts[::-1]):
                         f.write(obj.name + "_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
 
                 if not last_frame_is_included:
                     bpy.context.scene.frame_set(end_frame)
-                    mesh = obj.to_mesh(preserve_all_data_layers=True, depsgraph=bpy.context.evaluated_depsgraph_get())
-                    verts = [obj.matrix_world @ vert.co for vert in mesh.vertices]
+                    depsgraph = bpy.context.evaluated_depsgraph_get()
+                    ob_eval = obj.evaluated_get(depsgraph)
+                    mesh = ob_eval.to_mesh()
+                    mesh.transform(ob_eval.matrix_world) # apply modifiers with preview settings
+                    verts = [vert.co for vert in mesh.vertices]
                     for i, v in enumerate(verts[::-1]):
                         f.write(obj.name + "_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
+                obj.hide_viewport = hide_initial
         return {"FINISHED"}
 
     def draw(self, context):
@@ -361,8 +370,14 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
     def execute(self, context):
         obj = bpy.context.active_object
         if obj.type == "MESH":
-            mesh = obj.to_mesh(preserve_all_data_layers=True, depsgraph=bpy.context.evaluated_depsgraph_get())
-            verts = [obj.matrix_world @ vert.co for vert in mesh.vertices]
+            hide_initial = obj.hide_viewport
+            obj.hide_viewport = False
+            depsgraph = bpy.context.evaluated_depsgraph_get()
+            ob_eval = obj.evaluated_get(depsgraph)
+            mesh = ob_eval.to_mesh()
+            mesh.transform(ob_eval.matrix_world) # apply modifiers with preview settings
+            verts = [vert.co for vert in mesh.vertices]
+            obj.hide_viewport = hide_initial
         elif obj.type == "CURVE":
             verts = [(obj.matrix_world @ Vector(p.co[:3])) for p in obj.data.splines[0].points]
         else:
@@ -392,13 +407,19 @@ class SaveMeshAnimationVertices(bpy.types.Operator):
         if obj.type != "MESH":
             raise Exception("Unsupported type: {}.".format(obj.type))
 
+        hide_initial = obj.hide_viewport
+        obj.hide_viewport = False
         with open(self.filepath, "w") as f:
             for frame in range(bpy.context.scene.frame_current, 251):
                 bpy.context.scene.frame_set(frame)
-                mesh = obj.to_mesh(preserve_all_data_layers=True, depsgraph=bpy.context.evaluated_depsgraph_get())
-                verts = [obj.matrix_world @ vert.co for vert in mesh.vertices]
+                depsgraph = bpy.context.evaluated_depsgraph_get()
+                ob_eval = obj.evaluated_get(depsgraph)
+                mesh = ob_eval.to_mesh()
+                mesh.transform(ob_eval.matrix_world) # apply modifiers with preview settings
+                verts = [vert.co for vert in mesh.vertices]
                 for i, v in enumerate(verts[::-1]):
                     f.write("OBJ_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
+        obj.hide_viewport = hide_initial
         return {"FINISHED"}
 
     def invoke(self, context, event):
