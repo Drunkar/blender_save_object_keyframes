@@ -21,7 +21,7 @@ bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
     "version": (0, 9, 3),
-    "blender": (2, 79),
+    "blender": (2, 80, 0),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
     "warning": "",
@@ -130,7 +130,7 @@ class SaveAnimations(bpy.types.Operator):
     def execute(self, context):
         objs = []
         for name, obj in bpy.context.scene.objects.items():
-            if obj.select:
+            if obj.select_get():
                 matched = re.search(context.scene.save_keyframes_id_key, name)
                 if matched:
                     objs.append(obj)
@@ -220,15 +220,15 @@ class SaveAnimationsOfMesh(bpy.types.Operator):
                 #     frame_2: [], ...}
                 for frame in range(start_frame, end_frame+1)[::interval]:
                     bpy.context.scene.frame_set(frame)
-                    mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
-                    verts = [obj.matrix_world * vert.co for vert in mesh.vertices]
+                    mesh = obj.to_mesh(preserve_all_data_layers=True, depsgraph=bpy.context.evaluated_depsgraph_get())
+                    verts = [obj.matrix_world @ vert.co for vert in mesh.vertices]
                     for i, v in enumerate(verts[::-1]):
                         f.write(obj.name + "_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
 
                 if not last_frame_is_included:
                     bpy.context.scene.frame_set(end_frame)
-                    mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
-                    verts = [obj.matrix_world * vert.co for vert in mesh.vertices]
+                    mesh = obj.to_mesh(preserve_all_data_layers=True, depsgraph=bpy.context.evaluated_depsgraph_get())
+                    verts = [obj.matrix_world @ vert.co for vert in mesh.vertices]
                     for i, v in enumerate(verts[::-1]):
                         f.write(obj.name + "_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
         return {"FINISHED"}
@@ -329,7 +329,7 @@ class SaveSelectionPositions(bpy.types.Operator):
     # main
     def execute(self, context):
         with open(self.filepath, "w") as f:
-            for obj in [o for o in bpy.context.scene.objects if o.select][::-1]:
+            for obj in [o for o in bpy.context.scene.objects if o.select_get()][::-1]:
                 loc = obj.matrix_world.to_translation()
                 rot = obj.matrix_world.to_euler()
                 sca = obj.matrix_world.to_scale()
@@ -361,10 +361,10 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
     def execute(self, context):
         obj = bpy.context.active_object
         if obj.type == "MESH":
-            mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
-            verts = [obj.matrix_world * vert.co for vert in mesh.vertices]
+            mesh = obj.to_mesh(preserve_all_data_layers=True, depsgraph=bpy.context.evaluated_depsgraph_get())
+            verts = [obj.matrix_world @ vert.co for vert in mesh.vertices]
         elif obj.type == "CURVE":
-            verts = [(obj.matrix_world * Vector(p.co[:3])) for p in obj.data.splines[0].points]
+            verts = [(obj.matrix_world @ Vector(p.co[:3])) for p in obj.data.splines[0].points]
         else:
             raise Exception("Unsupported type: {}.".format(obj.type))
         with open(self.filepath, "w") as f:
@@ -395,8 +395,8 @@ class SaveMeshAnimationVertices(bpy.types.Operator):
         with open(self.filepath, "w") as f:
             for frame in range(bpy.context.scene.frame_current, 251):
                 bpy.context.scene.frame_set(frame)
-                mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
-                verts = [obj.matrix_world * vert.co for vert in mesh.vertices]
+                mesh = obj.to_mesh(preserve_all_data_layers=True, depsgraph=bpy.context.evaluated_depsgraph_get())
+                verts = [obj.matrix_world @ vert.co for vert in mesh.vertices]
                 for i, v in enumerate(verts[::-1]):
                     f.write("OBJ_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
         return {"FINISHED"}
@@ -425,9 +425,7 @@ def register_shortcut():
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
     if kc:
-        # register shortcut in 3d view
         km = kc.keymaps.new(name="3D View", space_type="VIEW_3D")
-        # key
         kmi = km.keymap_items.new(
             idname=SaveKeyframes.bl_idname,
             type="K",
@@ -435,21 +433,30 @@ def register_shortcut():
             shift=False,
             ctrl=True,
             alt=True)
-        # register to shortcut key list
         addon_keymaps.append((km, kmi))
 
 
 def unregister_shortcut():
     for km, kmi in addon_keymaps:
-        # unregister shortcut key
         km.keymap_items.remove(kmi)
-    # clear shortcut key list
     addon_keymaps.clear()
+
+
+classes = (
+    SaveKeyframes,
+    SaveAnimations,
+    SaveAnimationsOfMesh,
+    SaveMaterialKeyframes,
+    SaveSelectionPositions,
+    SaveVerticesPositionsOfMesh,
+    SaveMeshAnimationVertices,
+)
 
 
 def register():
     unregister_shortcut()
-    bpy.utils.register_module(__name__)
+    for cls in classes:
+        bpy.utils.register_class(cls)
     bpy.types.VIEW3D_MT_object_animation.append(menu_func)
     bpy.types.Scene.save_keyframes_id_key\
         = bpy.props.StringProperty(
@@ -477,7 +484,8 @@ def register():
 
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
     bpy.types.VIEW3D_MT_object_animation.remove(menu_func)
     del bpy.types.Scene.save_keyframes_id_key
     del bpy.types.Scene.save_keyframes_start_frame
