@@ -20,7 +20,7 @@ from mathutils import Vector
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 9, 3),
+    "version": (0, 9, 4),
     "blender": (2, 80, 0),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
@@ -99,7 +99,7 @@ class SaveKeyframes(bpy.types.Operator):
         if bpy.data.is_saved:
             filepath = bpy.path.abspath(
                 "//" + context.scene.save_keyframes_file_name + ".csv")
-            with open(filepath, "w") as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 for uav, frames in keyframes.items():
                     for frame, v in frames.items():
                         v = map(str, v)
@@ -166,7 +166,7 @@ class SaveAnimations(bpy.types.Operator):
         if bpy.data.is_saved:
             filepath = bpy.path.abspath(
                 "//" + context.scene.save_keyframes_file_name + ".csv")
-            with open(filepath, "w") as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 for uav, frames in keyframes.items():
                     for frame, v in frames.items():
                         v = map(str, v)
@@ -208,7 +208,7 @@ class SaveAnimationsOfMesh(bpy.types.Operator):
         last_frame_is_included = (end_frame - start_frame) % interval == 0
         filepath = bpy.path.abspath(
             "//" + context.scene.save_keyframes_file_name + ".csv")
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             for obj in objs:
                 # register keyframes
                 # {obj_name: {
@@ -307,7 +307,7 @@ class SaveMaterialKeyframes(bpy.types.Operator):
         if bpy.data.is_saved:
             filepath = bpy.path.abspath(
                 "//" + context.scene.save_keyframes_file_name + ".csv")
-            with open(filepath, "w") as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 for uav, frames in keyframes.items():
                     for frame, v in frames.items():
                         v = map(str, v)
@@ -337,7 +337,7 @@ class SaveSelectionPositions(bpy.types.Operator):
 
     # main
     def execute(self, context):
-        with open(self.filepath, "w") as f:
+        with open(self.filepath, "w", encoding="utf-8") as f:
             for obj in [o for o in bpy.context.scene.objects if o.select_get()][::-1]:
                 loc = obj.matrix_world.to_translation()
                 rot = obj.matrix_world.to_euler()
@@ -382,7 +382,7 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
             verts = [(obj.matrix_world @ Vector(p.co[:3])) for p in obj.data.splines[0].points]
         else:
             raise Exception("Unsupported type: {}.".format(obj.type))
-        with open(self.filepath, "w") as f:
+        with open(self.filepath, "w", encoding="utf-8") as f:
             for v in verts[::-1]:
                 f.write(str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + "\n")
         return {"FINISHED"}
@@ -409,7 +409,7 @@ class SaveMeshAnimationVertices(bpy.types.Operator):
 
         hide_initial = obj.hide_viewport
         obj.hide_viewport = False
-        with open(self.filepath, "w") as f:
+        with open(self.filepath, "w", encoding="utf-8") as f:
             for frame in range(bpy.context.scene.frame_current, 251):
                 bpy.context.scene.frame_set(frame)
                 depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -420,6 +420,47 @@ class SaveMeshAnimationVertices(bpy.types.Operator):
                 for i, v in enumerate(verts[::-1]):
                     f.write("OBJ_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
         obj.hide_viewport = hide_initial
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        self.filepath = ".csv"
+        bpy.context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
+class SaveUVMapOfMesh(bpy.types.Operator):
+
+    bl_idname = "object.save_uv_map_of_mesh"
+    bl_label = "save uv vertices positions of mesh"
+    bl_description = "Save uv vertices\' positions of active mesh."
+    bl_options = {"REGISTER", "UNDO"}
+    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+
+    # main
+    def execute(self, context):
+        obj = bpy.context.active_object
+        uv_layer = obj.data.uv_layers.active.data
+        if obj.type == "MESH":
+            hide_initial = obj.hide_viewport
+            obj.hide_viewport = False
+            depsgraph = bpy.context.evaluated_depsgraph_get()
+            ob_eval = obj.evaluated_get(depsgraph)
+            mesh = ob_eval.to_mesh()
+            mesh.transform(ob_eval.matrix_world)  # apply modifiers with preview settings
+            uv_pos = {}
+            for lo in mesh.loops:
+                p = [str(v) for v in mesh.vertices[lo.vertex_index].co]
+                p = ",".join(p)
+                if p not in uv_pos:
+                    uv_pos[p] = uv_layer[lo.index].uv
+            verts = [",".join([str(vert.co[0]), str(vert.co[1]), str(vert.co[2])]) for vert in mesh.vertices]
+            obj.hide_viewport = hide_initial
+        else:
+            raise Exception("Unsupported type: {}.".format(obj.type))
+
+        with open(self.filepath, "w", encoding="utf-8") as f:
+            for v in verts[::-1]:
+                f.write(str(uv_pos[v][0]) + "," + str(uv_pos[v][1]) + "\n")
         return {"FINISHED"}
 
     def invoke(self, context, event):
@@ -440,6 +481,8 @@ def menu_func(self, context):
                          text="Save vertices positions of mesh")
     self.layout.operator(SaveMeshAnimationVertices.bl_idname,
                          text="Save vertices positions of mesh animation")
+    self.layout.operator(SaveUVMapOfMesh.bl_idname,
+                         text="Save uv vertices positions of mesh")
 
 
 def register_shortcut():
@@ -471,6 +514,7 @@ classes = (
     SaveSelectionPositions,
     SaveVerticesPositionsOfMesh,
     SaveMeshAnimationVertices,
+    SaveUVMapOfMesh,
 )
 
 
