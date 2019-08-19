@@ -439,7 +439,6 @@ class SaveUVMapOfMesh(bpy.types.Operator):
     # main
     def execute(self, context):
         obj = bpy.context.active_object
-        uv_layer = obj.data.uv_layers.active.data
         if obj.type == "MESH":
             hide_initial = obj.hide_viewport
             obj.hide_viewport = False
@@ -447,12 +446,20 @@ class SaveUVMapOfMesh(bpy.types.Operator):
             ob_eval = obj.evaluated_get(depsgraph)
             mesh = ob_eval.to_mesh()
             mesh.transform(ob_eval.matrix_world)  # apply modifiers with preview settings
+            uv_layer = obj.data.uv_layers.active.data
             uv_pos = {}
             for lo in mesh.loops:
                 p = [str(v) for v in mesh.vertices[lo.vertex_index].co]
                 p = ",".join(p)
                 if p not in uv_pos:
                     uv_pos[p] = uv_layer[lo.index].uv
+                else:
+                    if uv_pos[p][1] == uv_layer[lo.index].uv[1]:
+                        if uv_pos[p][0] > uv_layer[lo.index].uv[0]:
+                            uv_pos[p] = uv_layer[lo.index].uv
+                    elif uv_pos[p][1] < uv_layer[lo.index].uv[1]:
+                            uv_pos[p] = uv_layer[lo.index].uv
+
             verts = [",".join([str(vert.co[0]), str(vert.co[1]), str(vert.co[2])]) for vert in mesh.vertices]
             obj.hide_viewport = hide_initial
         else:
