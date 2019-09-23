@@ -227,10 +227,14 @@ class SaveAnimationsOfMesh(bpy.types.Operator):
                     obj.hide_viewport = False
                 for frame in range(start_frame, end_frame+1)[::interval]:
                     bpy.context.scene.frame_set(frame)
-                    depsgraph = bpy.context.evaluated_depsgraph_get()
-                    ob_eval = obj.evaluated_get(depsgraph)
-                    mesh = ob_eval.to_mesh()
-                    mesh.transform(ob_eval.matrix_world) # apply modifiers with preview settings
+                    if bpy.app.version >= (2, 80, 0):
+                        depsgraph = bpy.context.evaluated_depsgraph_get()
+                        ob_eval = obj.evaluated_get(depsgraph)
+                        mesh = ob_eval.to_mesh()
+                        mesh.transform(ob_eval.matrix_world) # apply modifiers with preview settings
+                    else:
+                        mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
+                        mesh.transform(obj.matrix_world) # apply modifiers with preview settings
                     verts = [vert.co for vert in mesh.vertices]
                     for i, v in enumerate(verts[::-1]):
                         f.write(obj.name + "_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
@@ -241,9 +245,10 @@ class SaveAnimationsOfMesh(bpy.types.Operator):
                         depsgraph = bpy.context.evaluated_depsgraph_get()
                         ob_eval = obj.evaluated_get(depsgraph)
                         mesh = ob_eval.to_mesh()
+                        mesh.transform(ob_eval.matrix_world) # apply modifiers with preview settings
                     else:
                         mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
-                    mesh.transform(ob_eval.matrix_world) # apply modifiers with preview settings
+                        mesh.transform(obj.matrix_world) # apply modifiers with preview settings
                     verts = [vert.co for vert in mesh.vertices]
                     for i, v in enumerate(verts[::-1]):
                         f.write(obj.name + "_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
@@ -393,7 +398,7 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
                 obj.hide_viewport = hide_initial
             else:
                 mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
-                mesh.transform(ob_eval.matrix_world)
+                mesh.transform(obj.matrix_world)
             verts = [vert.co for vert in mesh.vertices]
         elif obj.type == "CURVE":
             verts = [(obj.matrix_world @ Vector(p.co[:3])) for p in obj.data.splines[0].points]
@@ -434,9 +439,10 @@ class SaveMeshAnimationVertices(bpy.types.Operator):
                     depsgraph = bpy.context.evaluated_depsgraph_get()
                     ob_eval = obj.evaluated_get(depsgraph)
                     mesh = ob_eval.to_mesh()
+                    mesh.transform(ob_eval.matrix_world) # apply modifiers with preview settings
                 else:
                     mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
-                mesh.transform(ob_eval.matrix_world) # apply modifiers with preview settings
+                    mesh.transform(obj.matrix_world) # apply modifiers with preview settings
                 verts = [vert.co for vert in mesh.vertices]
                 for i, v in enumerate(verts[::-1]):
                     f.write("OBJ_" + ("000000" + str(i+1))[-6:] + "," + str(frame) + "," + str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + ",0,0,0,1.0,1.0,1.0\n")
@@ -468,9 +474,10 @@ class SaveUVMapOfMesh(bpy.types.Operator):
                 depsgraph = bpy.context.evaluated_depsgraph_get()
                 ob_eval = obj.evaluated_get(depsgraph)
                 mesh = ob_eval.to_mesh()
+                mesh.transform(ob_eval.matrix_world)  # apply modifiers with preview settings
             else:
                 mesh = obj.to_mesh(bpy.context.scene, True, 'PREVIEW')
-            mesh.transform(ob_eval.matrix_world)  # apply modifiers with preview settings
+                mesh.transform(obj.matrix_world)  # apply modifiers with preview settings
             uv_layer = obj.data.uv_layers.active.data
             uv_pos = {}
             for lo in mesh.loops:
