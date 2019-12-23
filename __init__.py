@@ -401,7 +401,10 @@ class SaveVerticesPositionsOfMesh(bpy.types.Operator):
                 mesh.transform(obj.matrix_world)
             verts = [vert.co for vert in mesh.vertices]
         elif obj.type == "CURVE":
-            verts = [(obj.matrix_world @ Vector(p.co[:3])) for p in obj.data.splines[0].points]
+            if bpy.app.version >= (2, 80, 0):
+                verts = [(obj.matrix_world @ Vector(p.co[:3])) for p in obj.data.splines[0].points]
+            else:
+                verts = [(obj.matrix_world * Vector(p.co[:3])) for p in obj.data.splines[0].points]
         else:
             raise Exception("Unsupported type: {}.".format(obj.type))
         with open(self.filepath, "w", encoding="utf-8") as f:
