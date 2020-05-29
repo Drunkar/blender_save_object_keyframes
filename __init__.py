@@ -280,7 +280,7 @@ class SaveMaterialKeyframes(bpy.types.Operator):
         keyframe_index = {"diffuse_color": 0, "specular_color": 3,
                           "emit": 6, "ambient": 7, "translucency": 8}
         objs = []
-        for obj in bpy.context.scene.objects:
+        for obj in bpy.context.selected_objects:
             matched = re.search(context.scene.save_keyframes_id_key, obj.name)
             if matched:
                 objs.append(obj)
