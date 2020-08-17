@@ -20,7 +20,7 @@ from mathutils import Vector
 bl_info = {
     "name": "save object keyframes",
     "author": "Drunkar",
-    "version": (0, 9, 4),
+    "version": (0, 9, 5),
     "blender": (2, 80, 0),
     "location": "View3D > Object > Animation > SaveKeyframes, Ctrl + Alt + k",
     "description": "Save keyframes of object, which matched a keyword.",
@@ -144,6 +144,7 @@ class SaveAnimations(bpy.types.Operator):
         interval = context.scene.save_keyframes_interval
         last_frame_is_included = (end_frame - start_frame) % interval == 0
         keyframes = {}
+        frames = []
         for obj in objs:
             # register keyframes
             # {obj_name: {
@@ -155,6 +156,8 @@ class SaveAnimations(bpy.types.Operator):
             #     frame_2: [], ...}
             keyframes[obj.name] = {}
             for frame in range(start_frame, end_frame+1)[::interval]:
+                if len(keyframes) == 1:
+                    frames.append(str(frame))
                 bpy.context.scene.frame_set(frame)
                 loc = obj.matrix_world.to_translation()
                 rot = obj.matrix_world.to_euler()
@@ -167,14 +170,17 @@ class SaveAnimations(bpy.types.Operator):
                 sca = obj.matrix_world.to_scale()
                 keyframes[obj.name][str(end_frame)] = [loc[0], loc[1], loc[2], rot[0], rot[1], rot[2], sca[0], sca[1], sca[2]]
 
+        # write csv in order of frame asc
+        obj_names = [obj.name for obj in objs]
+        obj_names.sort()
         if bpy.data.is_saved:
             filepath = bpy.path.abspath(
                 "//" + context.scene.save_keyframes_file_name + ".csv")
             with open(filepath, "w", encoding="utf-8") as f:
-                for uav, frames in keyframes.items():
-                    for frame, v in frames.items():
-                        v = map(str, v)
-                        f.write(uav + "," + frame + "," + ",".join(v) + "\n")
+                for fr in frames:
+                    for obj_name in obj_names:
+                        v = map(str, keyframes[obj_name][fr])
+                        f.write(obj_name + "," + fr + "," + ",".join(v) + "\n")
         else:
             raise Exception("Please save blender file first.")
         return {"FINISHED"}
